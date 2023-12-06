@@ -240,7 +240,14 @@ class DefectDataset(Dataset):
                 self.labels.append(label)
                 if self.set == 'test' and self.get_mask:
                     extension = '_mask' if sc != 'good' else ''
-                    mask_path = i_path.replace('rgb', 'gt') if c.use_3D_dataset else os.path.join(root, 'ground_truth',
+                    if sc != 'good': #'datasets/mvtec_ad/class_name/ground_truth/'
+                        mask_path = i_path.replace('rgb', 'gt') if c.use_3D_dataset else os.path.join(root, 'ground_truth',
+                                                                                                  sc,
+                                                                                                  p[
+                                                                                                  :-4] + extension + p[
+                                                                                                                     -4:])
+                    else:
+                        mask_path = i_path.replace('rgb', 'gt') if c.use_3D_dataset else os.path.join(set_dir,
                                                                                                   sc,
                                                                                                   p[
                                                                                                   :-4] + extension + p[
@@ -309,6 +316,10 @@ class DefectDataset(Dataset):
                 mask = Image.open(f)
                 mask = self.transform(np.array(mask), c.depth_len, binary=True)[:1]
                 mask[mask > 0] = 1
+
+                if label == 0:  # 'good'
+                    mask = torch.zeros(mask.shape)
+                
                 ret.append(mask)
         return ret
 
