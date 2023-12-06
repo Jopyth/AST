@@ -1,4 +1,4 @@
-# AST: Asymmetric Student-Teacher Networks for Industrial Anomaly Detection
+# Experiment with AST: Asymmetric Student-Teacher Networks for Industrial Anomaly Detection
 
 This is the code to the WACV 2023 paper "[Asymmetric Student-Teacher Networks for Industrial Anomaly Detection](https://arxiv.org/pdf/2210.07829.pdf)" by Marco Rudolph, Tom Wehrbein, Bodo Rosenhahn and Bastian Wandt.
 
