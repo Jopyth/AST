@@ -28,12 +28,12 @@ The following steps guide you from your dataset to your evaluation:
 
 * `python train_teacher.py`: Trains the teacher and saves the model to `models/...` . The teacher is trained with data augmentation. The augmented normal training images are saved in `datasets/mvtec_ad/bottle/train/good_aug/...` . Meanwhile the original and augmented images are loaded for training the teacher. There are three data augmentation methods applied to MVTec AD dataset and five for MVTec 3D dataset.
 * `python train_student.py`: Trains the student and saves the model to `models/...` . The student is trained without data augmentaion. You may reach out to the the parameter `img_aug` in the file to change the setting. The same goes for the teacher training.
-* `python eval.py`: Evaluates the student-teacher-network (image-level results and localization/segmentation).  Additionally, it can create ROC curves, anomaly score histograms, and localization images. The anomaly maps are saved in `viz/maps/...` . The image-level results of max F1 scores and corresponding classification threshold are displayed. An csv file named `evaluation_results.csv` is saved in the current directory with the predictions of individual images in the test set.
+* `python eval.py`: Evaluates the student-teacher-network (image-level results and localization/segmentation).  Additionally, it can create ROC curves, anomaly score histograms, and localization images. The anomaly maps are saved in `viz/maps/...` . The image-level results of max F1 scores and corresponding classification thresholds are displayed. An csv file named `evaluation_results.csv` is saved in the current directory with the predictions of individual images in the test set.
 
 ## Comment
 
 * The code support the test images that are merely divided into two classes: normal and anomalous. The images could vary in sizes and aspect ratios. 
-* In our experiments, training the teacher with data augmentation and the student without data augmentation results in the best*  performance on the bottle class of MVTec AD dataset. The comparison of the settings is as follows.
+* In our experiments, training the teacher with data augmentation and the student without data augmentation results in the best*  performance on the bottle class of MVTec AD dataset. 
 
 
 ## Credits
