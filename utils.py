@@ -84,7 +84,7 @@ def get_nf_loss(z, jac, mask=None, per_sample=False, per_pixel=False):
     return loss_per_sample.mean()
 
 
-def load_datasets(get_mask=True, get_features=c.pre_extracted, img_aug=img_aug):
+def load_datasets(get_mask=True, get_features=c.pre_extracted, img_aug=False):
     trainset = DefectDataset(dataset='train', get_mask=False, get_features=get_features, img_aug=img_aug) #img_aug=True
     testset = DefectDataset(dataset='test', get_mask=get_mask, get_features=get_features)
     return trainset, testset
@@ -278,8 +278,8 @@ class DefectDataset(Dataset):
                             transformed = augmentation_transform(image=np.asarray(img))
                             augmented_image = Image.fromarray(transformed["image"])
                             aug_img_path = os.path.join(aug_folder, str(k+1) + '_'+ p)
-                            augmented_image.save(augimg_path)
-                            print('augmented normal image in the training set saved in %s' %augimg_path)
+                            augmented_image.save(aug_img_path)
+                            print('augmented normal image in the training set saved in %s' %aug_img_path)
 
                             self.images.append(aug_img_path)
                             self.labels.append(label)
