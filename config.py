@@ -31,7 +31,7 @@ training_mask = (mode != 'RGB') # use foreground mask for training?
 eval_mask = (mode != 'RGB') # use foreground mask for evaluation?
 
 # 3D settings
-dilate_mask = True
+dilate_mask = False # True for 3D
 dilate_size = 8
 n_fills = 3
 bg_thresh = 7e-3
@@ -54,7 +54,7 @@ n_st_blocks = 4 # number of residual blocks in student
 # training parameters
 lr = 2e-4 # learning rate
 batch_size = 8
-eval_batch_size = batch_size * 2
+eval_batch_size = 1
 # total epochs = meta_epochs * sub_epochs
 # evaluation after <sub_epochs> epochs
 meta_epochs = 3 # total epochs = meta_epochs * sub_epochs

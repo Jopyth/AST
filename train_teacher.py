@@ -93,4 +93,4 @@ def train(train_loader, test_loader):
 
 
 if __name__ == "__main__":
-    train_dataset(train)
+    train_dataset(train, img_aug=True)

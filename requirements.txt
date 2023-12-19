@@ -7,4 +7,4 @@ matplotlib>=3.4.2
 tqdm>=4.62.2
 efficientnet-pytorch>=0.6.3
 tifffile>=2021.11.2
-PIL>=7.1.2
+pillow>=7.1.2

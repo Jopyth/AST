@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,15 +13,17 @@ from torchvision.datasets import ImageFolder
 
 import config as c
 
+from augmentation import Transformer, get_augmentation_combinations_from_transformer
 
-def train_dataset(train_function, get_mask=False):
+
+def train_dataset(train_function, get_mask=False, img_aug=False):
     all_classes = [d for d in os.listdir(c.dataset_dir) if os.path.isdir(join(c.dataset_dir, d))]
     max_scores = list()
     mean_scores = list()
     for i_c, cn in enumerate(all_classes):
         c.class_name = cn
         print('\n\nTrain class ' + c.class_name)
-        train_set, test_set = load_datasets(get_mask=get_mask)
+        train_set, test_set = load_datasets(get_mask=get_mask, img_aug=img_aug)
         train_loader, test_loader = make_dataloaders(train_set, test_set)
         mean_sc, max_sc = train_function(train_loader, test_loader)
         mean_scores.append(mean_sc)
@@ -81,9 +84,9 @@ def get_nf_loss(z, jac, mask=None, per_sample=False, per_pixel=False):
     return loss_per_sample.mean()
 
 
-def load_datasets(get_mask=True, get_features=c.pre_extracted):
-    trainset = DefectDataset(set='train', get_mask=False, get_features=get_features)
-    testset = DefectDataset(set='test', get_mask=get_mask, get_features=get_features)
+def load_datasets(get_mask=True, get_features=c.pre_extracted, img_aug=img_aug):
+    trainset = DefectDataset(dataset='train', get_mask=False, get_features=get_features, img_aug=img_aug) #img_aug=True
+    testset = DefectDataset(dataset='test', get_mask=get_mask, get_features=get_features)
     return trainset, testset
 
 
@@ -203,9 +206,9 @@ def downsampling(x, size, to_tensor=False, bin=True):
 
 
 class DefectDataset(Dataset):
-    def __init__(self, set='train', get_mask=True, get_features=True):
+    def __init__(self, dataset='train', get_mask=True, get_features=True, img_aug=False):
         super(DefectDataset, self).__init__()
-        self.set = set
+        self.set = dataset
         self.labels = list()
         self.masks = list()
         self.images = list()
@@ -215,13 +218,19 @@ class DefectDataset(Dataset):
         self.get_features = get_features
         self.image_transforms = transforms.Compose([transforms.Resize(c.img_size), transforms.ToTensor(),
                                                     transforms.Normalize(c.norm_mean, c.norm_std)])
+        self.img_aug = img_aug
+        self.img_class = list()
+        self.img_id_inclass = list()
+
         root = join(c.dataset_dir, c.class_name)
-        set_dir = os.path.join(root, set)
+        set_dir = os.path.join(root, dataset)
         subclass = os.listdir(set_dir)
         subclass.sort()
         class_counter = 1
         for sc in subclass:
             if sc == 'good':
+                label = 0
+            elif sc == 'good_aug':
                 label = 0
             else:
                 label = class_counter
@@ -229,6 +238,24 @@ class DefectDataset(Dataset):
                 class_counter += 1
             sub_dir = os.path.join(set_dir, sc)
             img_dir = join(sub_dir, 'rgb') if c.use_3D_dataset else sub_dir
+
+            # data augmnetation
+            augmentation_transforms = list()
+            aug_folder = img_dir + '_aug'
+            if self.set == 'train' and sc == 'good' and self.img_aug:
+                if not os.path.exists(aug_folder): 
+                    # for teacher training
+                    os.mkdir(aug_folder)
+                    print('the folder of augmented images is created: %s' % aug_folder)
+
+                    transformer = Transformer('mvtec')
+                    augmentation_combinations = get_augmentation_combinations_from_transformer(transformer=transformer)
+                    for augmentation_combination in augmentation_combinations:
+                        augmentation_transforms.append(transformer.get_transforms_with_index(list_index=augmentation_combination))
+                else:   
+                    # for student training
+                    print('the folder of augmented images already exists: %s' % aug_folder)
+
             img_paths = os.listdir(img_dir)
             img_paths.sort()
             for p in img_paths:
@@ -238,6 +265,35 @@ class DefectDataset(Dataset):
                     continue
                 self.images.append(i_path)
                 self.labels.append(label)
+
+
+                # image augmentation only for training set
+                if self.set == 'train' and sc == 'good' and self.img_aug:
+                    if len(augmentation_transforms) > 0: 
+
+                        #save augmented images and run teacher training
+                        for k, augmentation_transform in enumerate(augmentation_transforms):
+
+                            img = Image.open(i_path)
+                            transformed = augmentation_transform(image=np.asarray(img))
+                            augmented_image = Image.fromarray(transformed["image"])
+                            aug_img_path = os.path.join(aug_folder, str(k+1) + '_'+ p)
+                            augmented_image.save(augimg_path)
+                            print('augmented normal image in the training set saved in %s' %augimg_path)
+
+                            self.images.append(aug_img_path)
+                            self.labels.append(label)
+
+
+                    # A.save(augmentation_transforms, Path(config.project.path) / "augmentations.json")
+                    # transform_train = get_transforms(
+                    #     config=transform_config_train,
+                    #     image_size=image_size,
+                    #     center_crop=center_crop,
+                    #     normalization=InputNormalizationMethod(normalization),
+                    # )
+
+                
                 if self.set == 'test' and self.get_mask:
                     extension = '_mask' if sc != 'good' else ''
                     if sc != 'good': #'datasets/mvtec_ad/class_name/ground_truth/'
@@ -253,6 +309,10 @@ class DefectDataset(Dataset):
                                                                                                   :-4] + extension + p[
                                                                                                                      -4:])
                     self.masks.append(mask_path)
+
+                    self.img_class.append(sc)
+                    self.img_id_inclass.append(p)
+
                 if c.use_3D_dataset:
                     self.depths.append(i_path.replace('rgb', 'z')[:-4] + '.npy')
 
@@ -309,18 +369,34 @@ class DefectDataset(Dataset):
         label = self.labels[index]
         feat = self.features[index] if self.get_features else 0
 
+
         ret = [depth, fg, label, img, feat]
 
-        if self.set == 'test' and self.get_mask:
-            with open(self.masks[index], 'rb') as f:
-                mask = Image.open(f)
-                mask = self.transform(np.array(mask), c.depth_len, binary=True)[:1]
-                mask[mask > 0] = 1
 
+        if self.set == 'test' and self.get_mask:
+            if os.path.isfile(self.masks[index]):
+                with open(self.masks[index], 'rb') as f:
+                    mask = Image.open(f)
+                    mask = self.transform(np.array(mask), c.depth_len, binary=True)[:1]
+                    mask[mask > 0] = 1
+
+                    if label == 0:  # 'good'
+                        mask = torch.zeros(mask.shape)
+                    
+                    ret.append(mask)
+            else:
+                print(f"Ground truth file {self.masks[index]} missing. Using filled mask instead.")
                 if label == 0:  # 'good'
-                    mask = torch.zeros(mask.shape)
+                    mask = torch.zeros([1, img.shape[1], img.shape[2]])
+                else:
+                    mask = torch.ones([1, img.shape[1], img.shape[2]])
                 
                 ret.append(mask)
+
+            if self.img_class and self.img_id_inclass:
+                ret.append(self.img_class[index])
+                ret.append(self.img_id_inclass[index])
+
         return ret
 
 

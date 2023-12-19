@@ -57,22 +57,34 @@ def compare_histogram(scores, classes, thresh=None, n_bins=64, log=False, name='
     save_plot('hist', name)
 
 
-def viz_maps(img, depth, gt, map, fg, name='', norm=True):
-    gt[fg == 0] = np.nan
-    map = np.copy(map)
-    map[fg == 0] = np.nan
+def viz_maps(img, depth, gt, anomaly_map, fg, name='', norm=True, enable_pixel_eval=False):
+    if gt.shape[-1] == fg.shape[-1]:
+        gt[fg == 0] = np.nan
+    anomaly_map = np.copy(anomaly_map)
+    if anomaly_map.shape[-1] == fg.shape[-1]:
+        anomaly_map[fg == 0] = np.nan
     if norm:
         img = img.transpose((1, 2, 0))
         img *= np.array(c.norm_std)
         img += np.array(c.norm_mean)
     img = np.clip(img, 0, 1)
-    fig, axs = plt.subplots(2, 2, figsize=(12, 12))
-    axs[0, 0].imshow(img)
-    axs[0, 1].imshow(depth)
-    axs[1, 0].imshow(gt, vmin=0, vmax=1)
-    axs[1, 1].imshow(map)
-    axs[0, 0].axis('off')
-    axs[0, 1].axis('off')
-    axs[1, 0].axis('off')
-    axs[1, 1].axis('off')
-    save_plot('maps', name)
+
+    if enable_pixel_eval:
+        fig, axs = plt.subplots(2, 2, figsize=(12, 12))
+        axs[0, 0].imshow(img)
+        axs[0, 1].imshow(depth)
+        axs[1, 0].imshow(gt, vmin=0, vmax=1)
+        axs[1, 1].imshow(anomaly_map)
+        axs[0, 0].axis('off')
+        axs[0, 1].axis('off')
+        axs[1, 0].axis('off')
+        axs[1, 1].axis('off')
+        save_plot('maps', name)
+    else:
+        fig, axs = plt.subplots(1, 2, figsize=(6, 6))
+        axs[0].imshow(img)
+        axs[1].imshow(anomaly_map)
+        axs[0].axis('off')
+        axs[1].axis('off')
+        save_plot('maps', name)
+

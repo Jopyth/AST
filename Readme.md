@@ -13,26 +13,35 @@ Install packages with:
 $ pip install -r requirements.txt
 ```
 
-## Configure and Run
+## Configure
 
 All configurations concerning data, model, training, visualization etc. can be made in _config.py_. The default configuration will run a training with paper-given parameters for MVTec 3D-AD.
 
 The following steps guide you from your dataset to your evaluation:
 
-* Set your _dataset_dir_ in _config.py_. This is the directory which contains the subdirectories of the classes you want to process. It should be configured whether the datasets contains 3D scans (set _use_3D_dataset_ in _config.py_). If 3D data is present (_use_3D_dataset=True_), the data structure from [MVTec 3D-AD](https://www.mvtec.com/company/research/datasets/mvtec-3d-ad) is assumed. It can be chosen which data domain should be used for detection (set mode in _config.py_). If the dataset does not contain 3D data (_use_3D_dataset=False_), the data structure from the [MVTec AD dataset](https://www.mvtec.com/company/research/datasets/mvtec-ad) is assumed. Both dataset structures are described in the documentation of _load_img_datasets_ in _utils.py_.
-* _preprocessing.py_: It is recommended to pre-extract the features beforehand to save training time. This script also preprocesses 3D scans. Alternatively, the raw images are used in training when setting _pre_extracted=False_ in _config.py_.
-* _train_teacher.py_: Trains the teacher and saves the model to _models/..._
-* _train_student.py_: Trains the student and saves the model to _models/..._
-* _eval.py_: Evaluates the student-teacher-network (image-level results and localization/segmentation). Additionally, it creates ROC curves, anomaly score histograms and localization images.
+* Set your `dataset_dir` in `config.py`. This is the directory which contains the subdirectories of the classes you want to process. It should be configured whether the datasets contains 3D scans (set `use_3D_dataset` in `config.py`). If 3D data is present (`use_3D_dataset=True`), the data structure from [MVTec 3D-AD](https://www.mvtec.com/company/research/datasets/mvtec-3d-ad) is assumed. It can be chosen which data domain should be used for detection (set mode in `config.py`). If the dataset does not contain 3D data (`use_3D_dataset=False`), the data structure from the [MVTec AD dataset](https://www.mvtec.com/company/research/datasets/mvtec-ad) is assumed. Both dataset structures are described in the documentation of `load_img_datasets` in `utils.py`.
+* `dilate_mask` in `config.py`: True for 3D setting.
+* `localize` in `config.py`: True for anomaly map visualization.
+* `preprocessing.py`: It is recommended to pre-extract the features beforehand to save training time. This script also preprocesses 3D scans. Alternatively, the raw images are used in training when setting `pre_extracted=False` in `config.py`.
 
-Note: Due to a bug in the original implementation for the RGB+3D setting the performance on MVTec 3D-AD is about 2% better than originally reported.
+## Run
+
+* `python train_teacher.py`: Trains the teacher and saves the model to `models/...` . The teacher is trained with data augmentation. The augmented normal training images are saved in `datasets/mvtec_ad/bottle/train/good_aug/...` . Meanwhile the original and augmented images are loaded for training the teacher. There are three data augmentation methods applied to MVTec AD dataset and five for MVTec 3D dataset.
+* `python train_student.py`: Trains the student and saves the model to `models/...` . The student is trained without data augmentaion. You may reach out to the the parameter `img_aug` in the file to change the setting. The same goes for the teacher training.
+* `python eval.py`: Evaluates the student-teacher-network (image-level results and localization/segmentation).  Additionally, it can create ROC curves, anomaly score histograms, and localization images. The anomaly maps are saved in `viz/maps/...` . The image-level results of max F1 scores and corresponding classification threshold are displayed. An csv file named `evaluation_results.csv` is saved in the current directory with the predictions of individual images in the test set.
+
+## Comment
+
+* The code support the test images that are merely divided into two classes: normal and anomalous. The images could vary in sizes and aspect ratios. 
+* In our experiments, training the teacher with data augmentation and the student without data augmentation results in the best*  performance on the bottle class of MVTec AD dataset. The comparison of the settings is as follows.
+
 
 ## Credits
 
 Some code of an old version of the [FrEIA framework](https://github.com/VLL-HD/FrEIA) was used for the implementation of Normalizing Flows. Follow [their tutorial](https://github.com/VLL-HD/FrEIA) if you need more documentation about it.
 
 ## Citation
-Please cite our paper in your publications if it helps your research. Even if it does not, you are welcome to cite us.
+Please cite our paper in your publications if it helps your research. Even if it does not, you are welcome to cite the authors.
 
     @inproceedings { RudWeh2023,
     author = {Marco Rudolph and Tom Wehrbein and Bodo Rosenhahn and Bastian Wandt},
