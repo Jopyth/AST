@@ -85,7 +85,7 @@ def get_nf_loss(z, jac, mask=None, per_sample=False, per_pixel=False):
 
 
 def load_datasets(get_mask=True, get_features=c.pre_extracted, img_aug=False):
-    trainset = DefectDataset(dataset='train', get_mask=False, get_features=get_features, img_aug=img_aug) #img_aug=True
+    trainset = DefectDataset(dataset='train', get_mask=False, get_features=get_features, img_aug=img_aug)
     testset = DefectDataset(dataset='test', get_mask=get_mask, get_features=get_features)
     return trainset, testset
 
@@ -231,6 +231,9 @@ class DefectDataset(Dataset):
             if sc == 'good':
                 label = 0
             elif sc == 'good_aug':
+                if not img_aug:
+                    print("not loading augmented train images, since img_aug is False.")
+                    continue
                 label = 0
             else:
                 label = class_counter
@@ -242,6 +245,7 @@ class DefectDataset(Dataset):
             # data augmnetation
             augmentation_transforms = list()
             aug_folder = img_dir + '_aug'
+            num_aug_images = 0
             if self.set == 'train' and sc == 'good' and self.img_aug:
                 if not os.path.exists(aug_folder): 
                     # for teacher training
@@ -258,6 +262,7 @@ class DefectDataset(Dataset):
 
             img_paths = os.listdir(img_dir)
             img_paths.sort()
+            print(f"reading '{self.set}' - '{sc}' data ({len(img_paths)} files) from {img_dir}")
             for p in img_paths:
                 i_path = os.path.join(img_dir, p)
                 if not i_path.lower().endswith(
@@ -269,8 +274,7 @@ class DefectDataset(Dataset):
 
                 # image augmentation only for training set
                 if self.set == 'train' and sc == 'good' and self.img_aug:
-                    if len(augmentation_transforms) > 0: 
-
+                    if len(augmentation_transforms) > 0:
                         #save augmented images and run teacher training
                         for k, augmentation_transform in enumerate(augmentation_transforms):
 
@@ -279,11 +283,10 @@ class DefectDataset(Dataset):
                             augmented_image = Image.fromarray(transformed["image"])
                             aug_img_path = os.path.join(aug_folder, str(k+1) + '_'+ p)
                             augmented_image.save(aug_img_path)
-                            print('augmented normal image in the training set saved in %s' %aug_img_path)
-
+                            # print('augmented normal image in the training set saved in %s' %aug_img_path)
+                            num_aug_images += 1
                             self.images.append(aug_img_path)
                             self.labels.append(label)
-
 
                     # A.save(augmentation_transforms, Path(config.project.path) / "augmentations.json")
                     # transform_train = get_transforms(
@@ -318,6 +321,10 @@ class DefectDataset(Dataset):
 
         if get_features:
             self.features = np.load(os.path.join(c.feature_dir, c.class_name, set + '.npy'))
+
+        if num_aug_images > 0:
+            print(f"added {num_aug_images} augmented images to the dataset...")
+        print(f"'{dataset}' data set loaded with {len(self.images)} images")
 
         self.img_mean = torch.FloatTensor(c.norm_mean)[:, None, None]
         self.img_std = torch.FloatTensor(c.norm_std)[:, None, None]

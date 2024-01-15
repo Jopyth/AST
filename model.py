@@ -176,7 +176,7 @@ def save_weights(model, suffix):
         os.makedirs(MODEL_DIR)
     model.to('cpu')
     torch.save(model.net.state_dict(), join(MODEL_DIR, f'{c.modelname}_{c.class_name}_{suffix}.pth'))
-    print('student saved')
+    print(f'{suffix} saved')
     model.to(c.device)
 
 

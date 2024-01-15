@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import torch
 from os.path import join
@@ -22,6 +23,12 @@ def train(train_loader, test_loader):
 
     max_st_obs = Score_Observer('AUROC  max over maps')
     mean_st_obs = Score_Observer('AUROC mean over maps')
+
+    batch_limit_warning_printed = False
+
+    start = time.time()
+    train_log_step = 0
+    test_log_step = 0
 
     for epoch in range(c.meta_epochs):
         # train some epochs
@@ -49,9 +56,18 @@ def train(train_loader, test_loader):
 
                 train_loss.append(t2np(loss))
 
+                if c.sub_epoch_batch_limit > 0 and i > c.sub_epoch_batch_limit:
+                    if not batch_limit_warning_printed:
+                        batch_limit_warning_printed = True
+                        print(f"Batch limit of {c.sub_epoch_batch_limit} used to limit time per sub epoch.")
+                    break
+
             mean_train_loss = np.mean(train_loss)
-            if c.verbose and sub_epoch % 4 == 0:  # and epoch == 0:
-                print('Epoch: {:d}.{:d} \t train loss: {:.4f}'.format(epoch, sub_epoch, mean_train_loss))
+            if "mlflow_tracking_uri" in globals():
+                mlflow.log_metric(f"{c.class_name}-student-train-loss", mean_train_loss, step=train_log_step)
+                train_log_step += 1
+            if c.verbose and sub_epoch % c.sub_epoch_log_interval == 0:  # and epoch == 0:
+                print('Epoch: {:d}.{:d} \t train loss: {:.4f} \t ({:d} s runtime)'.format(epoch, sub_epoch, mean_train_loss, int(time.time() - start)))
 
         # evaluate
         student.eval()
@@ -89,6 +105,9 @@ def train(train_loader, test_loader):
         max_st = np.concatenate(max_st)
         test_loss = np.mean(np.array(test_loss))
 
+        if "mlflow_tracking_uri" in globals():
+            mlflow.log_metric(f"{c.class_name}-student-test-loss", test_loss, step=test_log_step)
+            test_log_step += 1
         if c.verbose:
             print('Epoch: {:d} \t test_loss: {:.4f}'.format(epoch, test_loss))
 

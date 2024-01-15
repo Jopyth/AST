@@ -5,7 +5,7 @@ import albumentations as A
 from enum import Enum
 from albumentations.pytorch import ToTensorV2
 from omegaconf import DictConfig
-from anomalib.data.utils.image import get_image_height_and_width
+# from anomalib.data.utils.image import get_image_height_and_width
 
 
 # data augmentation code from https://github.com/scortexio/patchcore-few-shot
@@ -101,7 +101,7 @@ class InputNormalizationMethod(str, Enum):
     IMAGENET = "imagenet"  # normalization to ImageNet statistics
 
 
-def get_image_height_and_width(image_size: int | tuple[int, int]) -> tuple[int, int]:
+def get_image_height_and_width(image_size):
     """Get image height and width from ``image_size`` variable.
 
     Args:
@@ -140,11 +140,11 @@ def get_image_height_and_width(image_size: int | tuple[int, int]) -> tuple[int, 
 
 
 def get_transforms(
-    config: str | A.Compose | None = None,
-    image_size: int | tuple[int, int] | None = None,
-    center_crop: int | tuple[int, int] | None = None,
-    normalization: InputNormalizationMethod = InputNormalizationMethod.IMAGENET,
-    to_tensor: bool = True,
+    config = None,
+    image_size = None,
+    center_crop = None,
+    normalization = InputNormalizationMethod.IMAGENET,
+    to_tensor = True,
 ) -> A.Compose:
     """Get transforms from config or image size.
 

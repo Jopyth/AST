@@ -57,8 +57,10 @@ batch_size = 8
 eval_batch_size = 1
 # total epochs = meta_epochs * sub_epochs
 # evaluation after <sub_epochs> epochs
-meta_epochs = 3 # total epochs = meta_epochs * sub_epochs
-sub_epochs = 24 #batch_size # evaluate after this number of epochs
+meta_epochs = 4 # total epochs = meta_epochs * sub_epochs -> changed from 3 to 4
+sub_epochs = 4 # evaluate after this number of epochs -> reduced from 24 to 4 for now
+sub_epoch_log_interval = 1 # log every X epochs -> changed from 4 to 1
+sub_epoch_batch_limit = 32 # limit number of batches in sub epochs -> augmentation can otherwise make dataset size explode
 
 # output settings
 verbose = True
