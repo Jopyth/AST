@@ -12,6 +12,7 @@ from utils import *
 from sklearn.metrics import precision_recall_curve
 import csv
 
+import os
 
 # F1 evalution code from https://github.com/caoyunkang/WinClip
 
@@ -99,12 +100,12 @@ def evaluate(test_loader, enable_pixel_eval=False):
     max_st_auc = roc_auc_score(is_anomaly, max_st)
 
     # visualize roc curve
-    # viz_roc(mean_st, is_anomaly, name='mean')
-    # viz_roc(max_st, is_anomaly, name='max')
+    viz_roc(mean_st, is_anomaly, name='mean')
+    viz_roc(max_st, is_anomaly, name='max')
 
     # visualize histogram
-    # compare_histogram(mean_st, is_anomaly, log=True, name='mean')
-    # compare_histogram(max_st, is_anomaly, log=True, name='max')
+    compare_histogram(mean_st, is_anomaly, log=True, name='mean')
+    compare_histogram(max_st, is_anomaly, log=True, name='max')
 
     # ccompute image-level f1 score using mean or max over anomaly maps.
     img_f1_mean, img_threshold_mean = calculate_f1_max(is_anomaly, mean_st)
@@ -155,7 +156,7 @@ def evaluate(test_loader, enable_pixel_eval=False):
 
 if __name__ == "__main__":
     ENABLE_PIXEL_EVAL = False
-    all_classes = [d for d in os.listdir(c.dataset_dir) if os.path.isdir(join(c.dataset_dir, d))]
+    all_classes = [d for d in os.listdir(c.dataset_dir) if os.path.isdir(os.path.join(c.dataset_dir, d))]
     max_scores = list()
     mean_scores = list()
     f1_scores = list()
@@ -173,6 +174,11 @@ if __name__ == "__main__":
         mean_scores.append(mean_sc)
         max_scores.append(max_sc)
         f1_scores.append(f1_sc)
+
+        # log f1 score for each class
+        if "mlflow_tracking_uri" in globals():
+            mlflow.log_metric(f"f1-{cn}", f1_sc)
+
     mean_scores = np.mean(mean_scores) * 100
     max_scores = np.mean(max_scores) * 100
     f1_scores = np.mean(f1_scores) * 100
@@ -182,3 +188,7 @@ if __name__ == "__main__":
                                                                                                         max_scores, pixel_scores, f1_scores))
     else:
         print('\nmean AUROC % over all classes\n\tmean over maps: {:.2f} \t max over maps: {:.2f} \nmean F1 score % over all classes: {:.2f}'.format(mean_scores, max_scores, f1_scores))
+
+    # log overall F1 score
+    if "mlflow_tracking_uri" in globals():
+        mlflow.log_metric("f1", f1_scores)
