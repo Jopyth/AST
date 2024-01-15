@@ -151,7 +151,8 @@ def evaluate(test_loader, enable_pixel_eval=False):
     print('AUROC %\t mean over maps: {:.2f} \t max over maps: {:.2f}'.format(mean_st_auc * 100, max_st_auc * 100))
     print('F1 score % \t mean over maps: {:.2f} \t max over maps: {:.2f}'.format(img_f1_mean * 100, img_f1_max * 100))
     print('Image-level AD threshold \t mean over maps: {:.2f} \t max over maps: {:.2f} \n'.format(img_threshold_mean, img_threshold_max))
-    return mean_st_auc, max_st_auc, img_f1
+
+    return mean_st_auc, max_st_auc, img_f1, mean_st, max_st, is_anomaly
 
 
 if __name__ == "__main__":
@@ -161,6 +162,11 @@ if __name__ == "__main__":
     mean_scores = list()
     f1_scores = list()
     pixel_scores = list()
+
+    mean_st_classes = list()
+    max_st_classes = list()
+    gt_classes = list()
+
     for i_c, cn in enumerate(all_classes):
         c.class_name = cn
         print('\nEvaluate class ' + c.class_name)
@@ -170,10 +176,15 @@ if __name__ == "__main__":
             mean_sc, max_sc, f1_sc, pixel_sc = evaluate(test_loader, enable_pixel_eval=True)
             pixel_scores.append(pixel_sc)
         else:
-            mean_sc, max_sc, f1_sc = evaluate(test_loader, enable_pixel_eval=False)
+            mean_sc, max_sc, f1_sc, mean_st, max_st, gt_class = evaluate(test_loader, enable_pixel_eval=False)
         mean_scores.append(mean_sc)
         max_scores.append(max_sc)
         f1_scores.append(f1_sc)
+
+        # record results over all classes
+        mean_st_classes.append(mean_st)
+        max_st_classes.append(max_st)
+        gt_classes.append(gt_class)
 
         # log f1 score for each class
         if "mlflow_tracking_uri" in globals():
@@ -188,6 +199,19 @@ if __name__ == "__main__":
                                                                                                         max_scores, pixel_scores, f1_scores))
     else:
         print('\nmean AUROC % over all classes\n\tmean over maps: {:.2f} \t max over maps: {:.2f} \nmean F1 score % over all classes: {:.2f}'.format(mean_scores, max_scores, f1_scores))
+
+    # recompute f1 over all classes
+    mean_st_classes = np.concatenate(mean_st_classes)
+    max_st_classes = np.concatenate(max_st_classes)
+    gt_classes = np.concatenate(gt_classes)
+
+    f1_mean_classes, threshold_mean_classes = calculate_f1_max(gt_classes, mean_st_classes)
+    f1_max_classes, threshold_max_classes = calculate_f1_max(gt_classes, max_st_classes)
+    f1_score_classes = f1_mean_classes if f1_mean_classes > f1_max_classes else f1_max_classes
+    threshold_classes = threshold_mean_classes if f1_mean_classes > f1_max_classes else threshold_max_classes
+    mean_st_auc_classes = roc_auc_score(gt_classes, mean_st_classes)
+    max_st_auc_classes = roc_auc_score(gt_classes, max_st_classes)
+    print('\nAUROC % over all classes\n\tmean over maps: {:.2f} \t max over maps: {:.2f} \nF1 score % over all classes: {:.2f}'.format(mean_st_auc_classes*100, max_st_auc_classes*100, f1_scores))
 
     # log overall F1 score
     if "mlflow_tracking_uri" in globals():
